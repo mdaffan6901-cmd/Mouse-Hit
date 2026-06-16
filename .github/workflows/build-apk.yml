@@ -1,0 +1,87 @@
+name: Build APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Capacitor
+        run: |
+          npm install -g @capacitor/cli
+
+      - name: Create Capacitor Project
+        run: |
+          mkdir android-build
+          cd android-build
+
+          cat > package.json <<EOF
+          {
+            "name": "mouse-hit",
+            "version": "1.0.0"
+          }
+          EOF
+
+          npm install @capacitor/core @capacitor/android
+
+          mkdir www
+
+          cp ../index.html www/index.html
+
+          cat > capacitor.config.json <<EOF
+          {
+            "appId": "com.mousehit.game",
+            "appName": "Mouse Hit",
+            "webDir": "www"
+          }
+          EOF
+
+          npx cap add android
+
+      - name: Copy App Icon
+        run: |
+          cd android-build
+
+          ICON_PATH="../mouse_hit_icon.png"
+
+          cp $ICON_PATH android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          cp $ICON_PATH android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+          cp $ICON_PATH android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+          cp $ICON_PATH android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+          cp $ICON_PATH android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+
+      - name: Sync Capacitor
+        run: |
+          cd android-build
+          npx cap sync android
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Build APK
+        run: |
+          cd android-build/android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mouse-Hit-APK
+          path: android-build/android/app/build/outputs/apk/debug/app-debug.apk
