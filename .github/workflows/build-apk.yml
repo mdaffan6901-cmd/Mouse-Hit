@@ -19,9 +19,11 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install Capacitor
-        run: |
-          npm install -g @capacitor/cli
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
 
       - name: Create Capacitor Project
         run: |
@@ -31,11 +33,12 @@ jobs:
           cat > package.json <<EOF
           {
             "name": "mouse-hit",
-            "version": "1.0.0"
+            "version": "1.0.0",
+            "private": true
           }
           EOF
 
-          npm install @capacitor/core @capacitor/android
+          npm install @capacitor/core@5.7.8 @capacitor/android@5.7.8 @capacitor/cli@5.7.8
 
           mkdir www
 
@@ -51,34 +54,47 @@ jobs:
 
           npx cap add android
 
-      - name: Copy App Icon
-        run: |
-          cd android-build
-
-          ICON_PATH="../mouse_hit_icon.png"
-
-          cp $ICON_PATH android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-          cp $ICON_PATH android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-          cp $ICON_PATH android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
-          cp $ICON_PATH android/app/src/main/res/mipmap-hdpi/ic_launcher.png
-          cp $ICON_PATH android/app/src/main/res/mipmap-mdpi/ic_launcher.png
-
       - name: Sync Capacitor
         run: |
           cd android-build
           npx cap sync android
 
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 21
+      - name: Replace App Icon
+        run: |
+          cd android-build
+
+          cp ../mouse_hit_icon.png android/app/src/main/res/mipmap-mdpi/ic_launcher.png || true
+          cp ../mouse_hit_icon.png android/app/src/main/res/mipmap-hdpi/ic_launcher.png || true
+          cp ../mouse_hit_icon.png android/app/src/main/res/mipmap-xhdpi/ic_launcher.png || true
+          cp ../mouse_hit_icon.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png || true
+          cp ../mouse_hit_icon.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png || true
+
+      - name: Remove Old Kotlin Dependencies
+        run: |
+          cd android-build/android
+
+          echo "" >> build.gradle
+
+          cat >> build.gradle <<'EOF'
+
+          configurations.all {
+              resolutionStrategy.eachDependency { details ->
+                  if (details.requested.group == 'org.jetbrains.kotlin') {
+                      details.useVersion '1.8.22'
+                  }
+              }
+          }
+          EOF
 
       - name: Build APK
         run: |
           cd android-build/android
+
           chmod +x gradlew
-          ./gradlew assembleDebug
+
+          ./gradlew clean
+
+          ./gradlew assembleDebug --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
