@@ -54,26 +54,26 @@ jobs:
 
           npx cap add android
 
+      - name: Generate Launcher Icons
+        run: |
+          cd android-build
+
+          npm install --save-dev @capacitor/assets
+
+          mkdir -p assets
+
+          cp ../mouse_hit_icon.png assets/icon.png
+
+          npx capacitor-assets generate --android
+
       - name: Sync Capacitor
         run: |
           cd android-build
           npx cap sync android
 
-      - name: Replace App Icon
-        run: |
-          cd android-build
-
-          cp ../mouse_hit_icon.png android/app/src/main/res/mipmap-mdpi/ic_launcher.png || true
-          cp ../mouse_hit_icon.png android/app/src/main/res/mipmap-hdpi/ic_launcher.png || true
-          cp ../mouse_hit_icon.png android/app/src/main/res/mipmap-xhdpi/ic_launcher.png || true
-          cp ../mouse_hit_icon.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png || true
-          cp ../mouse_hit_icon.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png || true
-
-      - name: Remove Old Kotlin Dependencies
+      - name: Fix Kotlin Version
         run: |
           cd android-build/android
-
-          echo "" >> build.gradle
 
           cat >> build.gradle <<'EOF'
 
